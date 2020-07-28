@@ -645,3 +645,235 @@ The setState function is used to update the state. It accepts a new state value 
 ```js
 setState(newState);
 ```
+
+**Functional updates**
+If the new state is computed using the previous state, you can pass a function to setState. The function will receive the previous value, and return an updated value. Here’s an example of a counter component that uses both forms of setState:
+
+```js
+function Counter({initialCount}) {
+  const [count, setCount] = useState(initialCount);
+  return (
+    <>
+      Count: {count}
+      <button onClick={() => setCount(initialCount)}>Reset</button>
+      <button onClick={() => setCount(prevCount => prevCount - 1)}>-</button>
+      <button onClick={() => setCount(prevCount => prevCount + 1)}>+</button>
+    </>
+  );
+}
+```
+
+The ”+” and ”-” buttons use the functional form, because the updated value is based on the previous value. But the “Reset” button uses the normal form, because it always sets the count back to the initial value.
+
+If your update function returns the exact same value as the current state, the subsequent rerender will be skipped completely.
+
+Note
+
+Unlike the setState method found in class components, useState does not automatically merge update objects. You can replicate this behavior by combining the function updater form with object spread syntax:
+
+```js
+setState(prevState => {
+  // Object.assign would also work
+  return {...prevState, ...updatedValues};
+});
+```
+
+Another option is `useReducer`, which is more suited for managing state objects that contain multiple sub-values.
+
+## useEffect
+
+Accepts a function that contains imperative, possibly effectful code.
+
+Mutations, subscriptions, timers, logging, and other side effects are not allowed inside the main body of a function component (referred to as React’s render phase). Doing so will lead to confusing bugs and inconsistencies in the UI.
+
+Instead, use useEffect. The function passed to useEffect will run after the render is committed to the screen. Think of effects as an escape hatch from React’s purely functional world into the imperative world.
+
+By default, effects run after every completed render, but you can choose to fire them only when certain values have changed.
+
+### Cleaning up an effect
+
+Often, effects create resources that need to be cleaned up before the component leaves the screen, such as a subscription or timer ID. To do this, the function passed to useEffect may return a clean-up function. For example, to create a subscription:
+
+```js
+useEffect(() => {
+  const subscription = props.source.subscribe();
+  return () => {
+    // Clean up the subscription
+    subscription.unsubscribe();
+  };
+});
+```
+
+The clean-up function runs before the component is removed from the UI to prevent memory leaks. Additionally, if a component renders multiple times (as they typically do), the previous effect is cleaned up before executing the next effect. In our example, this means a new subscription is created on every update. To avoid firing an effect on every update, refer to the next section.
+
+### Conditionally firing an effect
+
+The default behavior for effects is to fire the effect after every completed render. That way an effect is always recreated if one of its dependencies changes.
+
+However, this may be overkill in some cases, like the subscription example from the previous section. We don’t need to create a new subscription on every update, only if the source prop has changed.
+
+To implement this, pass a second argument to useEffect that is the array of values that the effect depends on. Our updated example now looks like this:
+
+```js
+useEffect(
+  () => {
+    const subscription = props.source.subscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
+  },
+  [props.source],
+);
+```
+
+Now the subscription will only be recreated when `props.source` changes.
+
+## useContext
+
+```js
+const value = useContext(MyContext);
+```
+
+Don’t forget that the argument to useContext must be the context object itself:
+
+Correct: useContext(MyContext)
+Incorrect: useContext(MyContext.Consumer)
+Incorrect: useContext(MyContext.Provider)
+
+A component calling useContext will always re-render when the context value changes. If re-rendering the component is expensive, you can optimize it by using `memoization`.
+
+
+# Additional Hooks
+
+The following Hooks are either variants of the basic ones from the previous section, or only needed for specific edge cases. Don’t stress about learning them up front.
+
+## useReducer
+
+```js
+const [state, dispatch] = useReducer(reducer, initialArg, init);
+```
+
+An alternative to `useState`. Accepts a reducer of type `(state, action) => newState`, and returns the current state paired with a dispatch method. (If you’re familiar with Redux, you already know how this works.)
+
+`useReducer` is usually preferable to `useState` when you have `complex state logic` that involves `multiple sub-values` or when the `next state depends on the previous one`. `useReducer` also lets you optimize performance for components that trigger deep updates because you can pass dispatch down instead of callbacks.
+
+Here’s the counter example from the useState section, rewritten to use a reducer:
+
+```js
+const initialState = {count: 0};
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'increment':
+      return {count: state.count + 1};
+    case 'decrement':
+      return {count: state.count - 1};
+    default:
+      throw new Error();
+  }
+}
+
+function Counter() {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  return (
+    <>
+      Count: {state.count}
+      <button onClick={() => dispatch({type: 'decrement'})}>-</button>
+      <button onClick={() => dispatch({type: 'increment'})}>+</button>
+    </>
+  );
+}
+```
+
+**Specifying the initial state**
+There are two different ways to initialize `useReducer state`. You may choose either one depending on the use case. The simplest way is to pass the initial state as a second argument:
+
+```js
+const [state, dispatch] = useReducer(
+    reducer,
+    {count: initialCount}
+);
+```
+
+
+# useEffect examples
+
+`useEffect` runs every signle render including the first rendering.
+
+```js
+import React, { useState, useEffect } from "react";
+
+const Clicker = () => {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    alert("something chnaged");
+  }, [count]);
+  return <button onClick={() => setCount(count + 1)}>Clicked! {count}</button>;
+};
+
+export default Clicker;
+```
+
+# Fetching Data w the useEffect Hook
+
+in here we have a select which we make an API call everytime we select a number. And we want to make that call every time that number changes.
+
+```js
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+
+const SwMovies = () => {
+  const [movieNumber, setMovieNumber] = useState(1);
+  const [movie, setMovie] = useState("");
+
+  useEffect(() => {
+    async function getData() {
+      const response = await axios.get(
+        `https://swapi.dev/api/people/${movieNumber}/`
+      );
+      setMovie(response.data);
+    }
+    getData();
+  }, [movieNumber]);
+
+  return (
+    <>
+      <h4>{movie.name}</h4>
+      <select
+        value={movieNumber}
+        onChange={(e) => setMovieNumber(e.target.value)}
+      >
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+        <option value="7">7</option>
+      </select>
+      <div>
+        <p></p>
+      </div>
+    </>
+  );
+};
+
+export default SwMovies;
+```
+
+And Now If we had another state, which we want to make API call whenever that state changes. means we have 2 states which we want to make api call whenever these states chnages.
+for example we want to make Ajax call whenever the `number` or `year` change.
+
+```js
+useEffect(() => {
+    async function getData() {
+      const response = await axios.get(
+        `https://swapi.dev/api/people/${movieNumber}/`
+      );
+      setMovie(response.data);
+    }
+    getData();
+  }, [number, year]);
+```
+
+or you can write theme in separate `useEffects`
