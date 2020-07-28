@@ -558,9 +558,11 @@ function ChatRecipientPicker() {
 }
 ```
 
+
 We keep the currently chosen `friend ID` in the `recipientID` state variable, and update it if the user chooses a different friend in the <select> picker.
 
 Because the useState Hook call gives us the latest value of the recipientID state variable, we can pass it to our custom useFriendStatus Hook as an argument:
+
 
 ```js
 const [recipientID, setRecipientID] = useState(1);
