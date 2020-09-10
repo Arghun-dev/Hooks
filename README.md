@@ -880,6 +880,12 @@ useEffect(() => {
 
 or you can write theme in separate `useEffects`
 
+# setState depending on `prevState` using `useState`
 
-# Hook Project
+```js
+const [count, setCount] = useState(0)
 
+onClick={() => {
+  setCount(prevCount => prevCount + 1)
+}}
+```
