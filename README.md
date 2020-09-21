@@ -889,3 +889,43 @@ onClick={() => {
   setCount(prevCount => prevCount + 1)
 }}
 ```
+
+# usePrevious Hook
+
+**this is a hook which do the same role as `prevState` in class components**
+
+```js
+import { useEffect, useRef } from 'react'
+
+function usePrevious(value) {
+    // The ref object is a generic container whose current property is mutable ...
+    // ... and can hold any value, similar to an instance property on a class
+    const ref = useRef()
+
+    // Store current value in ref
+    useEffect(() => {
+        ref.current = value
+    }, [value]) // Only re-run if value changes
+
+    // Return previous value (happens before update in useEffect above)
+    return ref.current
+}
+
+export default usePrevious
+```
+
+**using it:**
+
+```js
+const [state, setState] = useState('')
+
+const prevState = usePrevious(state)
+
+.
+.
+.
+
+if (prevState !== state) {
+  // do something
+}
+```
